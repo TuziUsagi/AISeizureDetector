@@ -4,7 +4,7 @@
 
 
 # Model (Inception):
-![LSTM model](https://raw.githubusercontent.com/TuziUsagi/AISeizureDetector/master/Inception_seizure_detector/model.png)
+![LSTM model](https://raw.githubusercontent.com/TuziUsagi/AISeizureDetector/master/model.png)
 1.	The input data will be up-sampled to create more input points
 2.	A fixed filter bank is applied to extract different frequencies components into different channels. This filter bank is generated in scipy and applied as a Conv1D layer and it is not trainable. This filter bank works as a manual feature extraction. 
 3.	Four inception blocks are used in parallel. First group of two have kernels with large dilate rate to look for the global features, one of them has maxpool and another has averagepool. Another group of two have kernels with no dilate to look for the local features, again, one of them has maxpool and another has averagepool.

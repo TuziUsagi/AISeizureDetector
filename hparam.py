@@ -22,7 +22,6 @@ def makeFIlterBank(numFilter, freqStep, filterTap, sampleFreq):
     count = count + 1
   return kernelList
 
-# The lookup tabel to convert label to one hot encoded vector
 def makeLabelLookupTable(LIST_OF_LABELS, LIST_OF_LABELS_VALUE):
   lookupTableKeys = tf.constant(LIST_OF_LABELS, dtype = tf.string)
   lookupTableVals = tf.constant(LIST_OF_LABELS_VALUE, dtype = tf.int32)
@@ -30,16 +29,17 @@ def makeLabelLookupTable(LIST_OF_LABELS, LIST_OF_LABELS_VALUE):
   lookupTableInit = tf.lookup.KeyValueTensorInitializer(lookupTableKeys, lookupTableVals, key_dtype = tf.string, value_dtype = tf.int32)
   return tf.lookup.StaticHashTable(lookupTableInit, lookupTableDefaultVals)
 
-def getStepPerEpoch(numOfUnqiueDataPoint, ratio, batch_size):
-  return int(numOfUnqiueDataPoint * ratio / batch_size + 1)
+def getStepPerEpoch(numOfUnqiueDataPoint, batch_size):
+  return int(numOfUnqiueDataPoint / batch_size + 1)
 
 def getInputShape(hparams):
   if(hparams['data_format'] == 'channels_last'):
-    return[hparams['inputLength'], hparams['inputChannel']]
+    return(hparams['inputLength']*hparams['upSamplingFactor'], hparams['inputChannel'])
   else:
-    return[hparams['inputChannel'], hparams['inputLength']]
+    return(hparams['inputChannel'], hparams['inputLength']*hparams['upSamplingFactor'])
 
 def getNormAxis(hparams):
+  axis = -2  # norm along channel dimension
   if(hparams['data_format'] == 'channels_last'):
     axis = -1
   else:
@@ -54,47 +54,48 @@ def getReduceAxis(hparams):
   return axis
 
 def gethparam():
-  numFilter = 4 # number of filters in the filter bank
+  numFilter = 7 # number of filters in the filter bank
   freqStep = 64/numFilter # bandwidth for each filter in the filter bank
   filterTap = 128
   sampleFreq = 250
-  LIST_OF_LABELS = ['seizure', 'baseline']
+  LIST_OF_LABELS = ['seizure','baseline']
   LIST_OF_LABELS_VALUE = [0, 1]
   lookupTable = makeLabelLookupTable(LIST_OF_LABELS, LIST_OF_LABELS_VALUE)
-  datasetBucket = './'
   savePrefix = './'
+  datasetBucket = 'gs://'
   randomDirArray = np.random.choice([-1.0, 1.0], 1024)
   hparams = {'train_data':[datasetBucket+'train.tfrecord'],
-             'eval_data':[datasetBucket+'eval.tfrecord'],
+             'eval_data':[datasetBucket+'train.tfrecord'],
              'logDir': savePrefix+'log/',
              'checkPointDir': savePrefix+'CheckPoint/etebestModel',
              'modelDir': savePrefix+'SavedModel',
              'TPUname': 'v3preemp-central1a2',
-             'numOfCores': 8,		# Use multiple cores to do date pre-processing
+             'numOfCores': 4,
               # Input data setup
-             'upSamplingFactor': 8, # Upsample the input signal
-             '64bFilter': False,	# Wheather to use double precision to apply the inital filter bank
-             'numOfUnqiueDataPoint': 175956+706832,
-             'evalPercentage': 0.2,	# Ratio of the validation data vs total data
-             'inputLength': 1024,	# Length of each input signal
-             'inputChannel': 1,		# How many channels are in the input data
+             'upSamplingFactor': 1,
+             '64bFilter': False,
+             'trainSetSize': 37264,
+             'evalSetSize': 9498,
+             'inputLength': 1024,
+             'inputChannel': 1,
              'data_format': 'channels_last',
-             'batch_size': 1024,
+             'batch_size': 4096,
              'augment': True,
               # Network setup
-             'dropout': 0.0,
+             'dropout': 0.4,
              'fullyConnUseBias': True,
-             'kernel1':(64), 'numFilter1':8, 'strides1': 1, 'act1': 'linear', 'use_bias1': True, 'poolsize1': (4), 'poolstride1': (4),
-             'kernel2':(32), 'numFilter2':16, 'strides2': 1, 'act2': 'linear', 'use_bias2': True, 'poolsize2': (4), 'poolstride2': (4), 
+             'kernel1':(64), 'numFilter1':16, 'strides1': 1, 'act1': 'linear', 'use_bias1': True, 'poolsize1': (2), 'poolstride1': (2),
+             'kernel2':(32), 'numFilter2':32, 'strides2': 1, 'act2': 'linear', 'use_bias2': True, 'poolsize2': (2), 'poolstride2': (2),
+             'kernel3':(16), 'numFilter3':8,  'strides3': 1, 'act3': 'linear', 'use_bias3': True, 'poolsize3': (2), 'poolstride3': (2), 
              'denseLayerSize1': 16,
              'denseLayerSize2': 16,
               # Training setup
              'resume': False,
              'mixedPrecision': False,
-             'validation_freq': 2, # How many training epochs finished before each eval event
+             'validation_freq': 1, # How many training epochs finished before each eval event
              'epochs': 36000,  # Total epochs in training loop
              'learning_rate':0.01, 
-             'reg_constant': 0.05,
+             'reg_constant': 0.01,
              'AdamBeta1': 0.9,
              'AdamBeta2': 0.999,
              'epsilon': 1e-7,
@@ -121,8 +122,8 @@ def gethparam():
     hparams['filterKernel'] = kernelList.astype('float64')
   else:
     hparams['filterKernel'] = kernelList.astype('float32')  
-  hparams['steps_per_epoch'] = getStepPerEpoch(hparams['numOfUnqiueDataPoint'], 1-hparams['evalPercentage'], hparams['batch_size'])
-  hparams['validation_steps'] = getStepPerEpoch(hparams['numOfUnqiueDataPoint'], hparams['evalPercentage'], hparams['batch_size'])
+  hparams['steps_per_epoch'] = 8*getStepPerEpoch(hparams['trainSetSize'], hparams['batch_size'])
+  hparams['validation_steps'] = getStepPerEpoch(hparams['evalSetSize'], hparams['batch_size'])
   hparams['randSeed'] = int(time.time())
   hparams['inputShape'] = getInputShape(hparams)
   hparams['normDim'] = getNormAxis(hparams) 

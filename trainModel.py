@@ -6,13 +6,13 @@ from __future__ import division
 from __future__ import print_function
 import os
 import tensorflow as tf
-from RNNmodel import eeg_rnn_gpu as create_model
+from inception import eeg_inception as create_model
 from readDataset import readDataset
 from hparam import gethparam
 from tensorflow.python import debug as tf_debug
 
 #Setup network
-#tf.keras.mixed_precision.experimental.set_policy('infer_float32_vars')
+tf.keras.mixed_precision.experimental.set_policy('infer_float32_vars')
 hparams = gethparam()
 
 # Get dataset
@@ -33,17 +33,17 @@ lossFunc = tf.keras.losses.CategoricalCrossentropy()
 # Metrics
 accMetrics = tf.keras.metrics.CategoricalAccuracy()
 
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=hparams['logDir'],write_grads = True, histogram_freq = 10, batch_size = hparams['batch_size'], update_freq = 'epoch', profile_batch=0, write_images=True)
-checkpointWeight_callback = tf.keras.callbacks.ModelCheckpoint(hparams['checkPointDir']+'.h5', save_best_only=True, load_weights_on_restart=False, monitor = hparams['monitorVal'], save_weights_only = True)
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=hparams['logDir'],write_grads = True, histogram_freq = 10, batch_size = hparams['batch_size'], update_freq = 'epoch', profile_batch=0, write_images=False)
+checkpointWeight_callback = tf.keras.callbacks.ModelCheckpoint(hparams['checkPointDir']+'.h5', save_best_only=True, load_weights_on_restart=False, monitor = hparams['monitorVal'], save_weights_only = False)
 checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(hparams['checkPointDir']+'_restore.h5', save_best_only=False, load_weights_on_restart=hparams['resume'], monitor = hparams['monitorVal'], save_weights_only = False)
 reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.75, patience=3, verbose = 1, min_delta = 0.001, cooldown = 3, min_lr=0.0005)
-callbacksList = [tensorboard_callback, checkpointWeight_callback, reduce_lr, checkpoint_callback]
+callbacksList = [checkpointWeight_callback, reduce_lr, checkpoint_callback]
 
 # Get model
 model = create_model(hparams, 'Train')
 model.summary()
 # compile model
-model.compile(optimizer = EEGOptimizer, loss = lossFunc, metrics = [accMetrics])
+model.compile(optimizer = EEGOptimizer, loss = lossFunc, metrics = [accMetrics], loss_weights=[1., 0.15, 0.15])
 
 # Start training/evaluation
 sess = tf.compat.v1.keras.backend.get_session()

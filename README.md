@@ -15,7 +15,7 @@
 
 ### Results:
 
-  The network was trained with a training set with ~700,000 samples and validated with a eval set with 190,000 samples and achieved 99.89% validation accuracy and 99.96% training accuracy.
+  The network was trained with a training set with ~37000 samples and validated with a eval set with 9500 samples and achieved 93% validation accuracy and 99% training accuracy.
 
 ### Directory structure:
 

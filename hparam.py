@@ -65,7 +65,7 @@ def gethparam():
   datasetBucket = 'gs://'
   randomDirArray = np.random.choice([-1.0, 1.0], 1024)
   hparams = {'train_data':[datasetBucket+'train.tfrecord'],
-             'eval_data':[datasetBucket+'train.tfrecord'],
+             'eval_data':[datasetBucket+'eval.tfrecord'],
              'logDir': savePrefix+'log/',
              'checkPointDir': savePrefix+'CheckPoint/etebestModel',
              'modelDir': savePrefix+'SavedModel',

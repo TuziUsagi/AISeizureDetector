@@ -1,4 +1,4 @@
-# EEG seizure detector based on Inception and LSTM
+# EEG seizure detector based on CNN and Inception like design
 
 [![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid)
 
